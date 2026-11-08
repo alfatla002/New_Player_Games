@@ -6,13 +6,14 @@ The Vercel deployment is built with the supplied Supabase public configuration. 
 
 ## Completed
 
-React/TypeScript board, four status columns, dnd-kit interactions, task creation/editing/deletion, search, labels, priority filters, due indicators, summary stats, native modal, responsive layout, and loading/error/empty states. Supabase guest-session code and complete tasks SQL migration with RLS are included. Source is committed locally and synchronized to the private Sites source repository. Your GitHub origin remains unchanged.
+React/TypeScript board, four status columns, dnd-kit interactions, task creation/editing/deletion, search, labels, priority filters, due indicators, summary stats, native modal, responsive layout, and loading/error/empty states. Supabase guest-session code and complete tasks SQL migration with RLS are included. Source is committed locally and pushed to the requested GitHub repository. Your GitHub origin remains unchanged.
 
 ## Verification
 
 - Production TypeScript/Vite build passed.
 - All eight unit tests passed. Additionally, 12 live API checks passed: distinct guest sessions; owner create, update, fetch and delete; denial of cross-user reads, updates, deletes and forged-owner inserts; denial of ownership transfer; denial of unauthenticated access; and preservation of the original task after unauthorized requests. The temporary test task was deleted.
-- Production dependency audit reported zero vulnerabilities.
+- Full dependency audit reported zero vulnerabilities.
+- The built production frontend also passed a real Chromium check against live Supabase: guest authentication, create, calendar, drag, reload persistence, second-guest isolation, edit, clear date, guest explanation and delete. No JavaScript errors were observed and the test task was cleaned up.
 - Word draft archive and XML are valid.
 - All 13 browser checks passed across the main suite and focused follow-ups: task CRUD, title/description validation, date selection and N/A, dirty-close protection, pointer drag, keyboard filters, draft retention after failed save, guest-session information, desktop/mobile layouts, drag rollback, and reduced motion. Desktop and mobile screenshots were reviewed. The missing Chromium libraries were downloaded and extracted to /tmp for this session.
 
