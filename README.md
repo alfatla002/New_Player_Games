@@ -58,6 +58,6 @@ The board refreshes after a successful drop, with no realtime subscription. Task
 
 ## Delivery status
 
-Supabase credentials, live database verification, GitHub push authentication, an evaluator-accessible deployment, and the candidate's final name still need to be supplied/configured. The private Sites demo is for owner preview and is not an evaluator submission URL. No assessment source text or PDF is included in this repository.
+Supabase public configuration is installed in the ignored local environment file. Live checks found anonymous sign-ins disabled and the tasks table missing; enable guest auth and run the SQL migration before use. Live database verification and an evaluator-accessible deployment remain pending. GitHub SSH authentication works for alfatla002. The submission draft uses Ali Al-Fatlawi. The private Sites demo is for owner preview and is not an evaluator submission URL. No assessment source text or PDF is included in this repository.
 
 Generate the local draft document with `python3 scripts/make_submission.py`. Finalize the name, hosting URL, and verification status before submitting. Generated documents and screenshots live in the git-ignored `artifacts/` directory.

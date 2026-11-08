@@ -2,7 +2,7 @@
 
 Private owner preview: https://nextplay-task-studio.trustworthystar1.chatgpt.site
 
-The preview runs in clearly labeled local demo mode. It is not a final reviewer-accessible Supabase deployment.
+The preview is built with the supplied Supabase public configuration. Guest sign-in currently fails because anonymous sign-ins are disabled; the tasks table also needs to be created. It is not a final reviewer-accessible Supabase deployment.
 
 ## Completed
 
@@ -18,11 +18,11 @@ React/TypeScript board, four status columns, dnd-kit interactions, task creation
 
 ## Required before submission
 
-1. Supply Supabase project URL and public anon/publishable key. Run the migration and enable anonymous sign-ins. Deploy with those build-time variables.
+1. Supabase URL and publishable key are configured in ignored .env. Run the migration and enable anonymous sign-ins. The live checks returned "Anonymous sign-ins are disabled" and PGRST205 for missing public.tasks.
 2. Test two separate browser profiles against the real backend, including direct cross-user requests against every RLS operation.
-3. Authenticate GitHub with `gh auth login`, then run `git push origin main`. Push previously failed because no HTTPS credentials were available.
+3. GitHub SSH authentication succeeds as alfatla002 using the local key whose public fingerprint matches the supplied value. Use `git push git@github.com:alfatla002/New_Player_Games.git HEAD:main` for subsequent updates. HTTPS gh authentication remains unconfigured.
 4. Deploy to Vercel, Netlify or Cloudflare Pages using `npm run build` and output `dist`; ensure assessors can open the URL.
-5. Supply your first and last name. Generate the Word document with `python3 scripts/make_submission.py --first FIRST --last LAST --url LIVE_URL`, and update its verification and deployment status to reflect the actual completed work.
+5. Candidate: Ali Al-Fatlawi. Generate the Word document with `python3 scripts/make_submission.py --first Ali --last Al-Fatlawi --url LIVE_URL`, and update its verification and deployment status after live setup.
 6. Upload the finalized document to Drive and share according to the submission form. Drive upload has not been performed.
 
 The assessment source document is not included in tracked files. Draft artifacts are git-ignored.
