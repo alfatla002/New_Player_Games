@@ -20,3 +20,21 @@ describe("board filtering", () => {
     expect(filterTasks(tasks, "", "", "")).toHaveLength(2);
   });
 });
+
+import { validateTask, localDate } from "./model";
+describe("task validation", () => {
+  it("requires a non-blank title and description", () => {
+    expect(validateTask({ title: "  ", description: "\n " })).toHaveProperty(
+      "title",
+    );
+    expect(validateTask({ title: "Task", description: "  " })).toHaveProperty(
+      "description",
+    );
+    expect(
+      validateTask({ title: "Task", description: "Useful details" }),
+    ).toEqual({});
+  });
+  it("keeps calendar dates in local time", () => {
+    expect(localDate(new Date(2026, 0, 2, 0, 1))).toBe("2026-01-02");
+  });
+});

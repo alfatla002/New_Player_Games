@@ -10,20 +10,19 @@ import {
   useDroppable,
   DragOverlay,
   type DragEndEvent,
+  pointerWithin,
+  rectIntersection,
 } from "@dnd-kit/core";
 import {
   ArrowUp,
   ArrowDown,
   Check,
-  ChevronDown,
   LayoutDashboard,
   Search,
   Plus,
   X,
   CalendarDays,
-  AlignLeft,
   Flag,
-  Trash2,
   LoaderCircle,
   AlertCircle,
   Columns3,
@@ -42,6 +41,9 @@ import {
   type Status,
 } from "./model";
 import { loadBoard, saveTask, deleteTask, persistDemo, supabase } from "./data";
+import { TaskDialog } from "./TaskDialog";
+import { Choice } from "./Choice";
+import { SessionInfo } from "./SessionInfo";
 import "./style.css";
 const labelColors: Record<string, string> = {
   Design: "purple",
@@ -53,23 +55,22 @@ function Card({
   task,
   onOpen,
   overlay = false,
+  disabled = false,
+  drag,
 }: {
   task: Task;
   onOpen: () => void;
   overlay?: boolean;
+  disabled?: boolean;
+  drag?: ReturnType<typeof useDraggable>;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: task.id });
+  const { attributes, listeners, setNodeRef, isDragging } = drag || {};
   const urgency = dueState(task.due_date, task.status);
   return (
     <article
       ref={overlay ? undefined : setNodeRef}
       className={`task-card ${isDragging ? "dragging" : ""} ${overlay ? "overlay" : ""}`}
-      style={
-        transform && !overlay
-          ? { transform: `translate3d(${transform.x}px,${transform.y}px,0)` }
-          : undefined
-      }
+      onClick={disabled || overlay ? undefined : onOpen}
     >
       <div className="card-top">
         <div className="tags">
@@ -80,6 +81,8 @@ function Card({
           ))}
         </div>
         <button
+          disabled={disabled || overlay}
+          onClick={(e) => e.stopPropagation()}
           className="drag-handle icon-button"
           aria-label={`Drag ${task.title}`}
           {...attributes}
@@ -88,7 +91,7 @@ function Card({
           <GripVertical size={15} />
         </button>
       </div>
-      <button className="card-body" onClick={onOpen}>
+      <button className="card-body" disabled={disabled || overlay}>
         <h3>{task.title}</h3>
         {task.description && <p>{task.description}</p>}
       </button>
@@ -103,7 +106,7 @@ function Card({
           )}
           {task.priority}
         </span>
-        {task.due_date && (
+        {task.due_date ? (
           <span className={`due ${urgency}`}>
             <CalendarDays size={12} />
             {urgency === "today"
@@ -113,6 +116,8 @@ function Card({
                   { month: "short", day: "numeric" },
                 )}
           </span>
+        ) : (
+          <span className="due no-date">No due date</span>
         )}
         {task.status === "done" && (
           <span className="complete">
@@ -123,16 +128,32 @@ function Card({
     </article>
   );
 }
+function DraggableCard({
+  task,
+  disabled,
+  onOpen,
+}: {
+  task: Task;
+  disabled: boolean;
+  onOpen: () => void;
+}) {
+  const drag = useDraggable({ id: task.id, disabled });
+  return <Card task={task} disabled={disabled} onOpen={onOpen} drag={drag} />;
+}
 function Column({
   status,
   tasks,
   onNew,
   onOpen,
+  disabled,
+  filtered,
 }: {
   status: Status;
   tasks: Task[];
   onNew: () => void;
   onOpen: (t: Task) => void;
+  disabled: boolean;
+  filtered: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
@@ -147,6 +168,7 @@ function Column({
         <button
           className="icon-button"
           onClick={onNew}
+          disabled={disabled}
           aria-label={`Add task to ${names[status]}`}
         >
           <Plus size={17} />
@@ -154,17 +176,30 @@ function Column({
       </div>
       <div className="cards">
         {tasks.map((t) => (
-          <Card key={t.id} task={t} onOpen={() => onOpen(t)} />
+          <DraggableCard
+            key={t.id}
+            task={t}
+            disabled={disabled}
+            onOpen={() => onOpen(t)}
+          />
         ))}
         {!tasks.length && (
           <div className="empty-column">
             <Columns3 size={23} />
-            <p>A little room for what’s next.</p>
-            <button onClick={onNew}>Create a task</button>
+            <p>
+              {filtered
+                ? "No matching tasks here."
+                : "A little room for what’s next."}
+            </p>
+            {!filtered && (
+              <button disabled={disabled} onClick={onNew}>
+                Create a task
+              </button>
+            )}
           </div>
         )}
       </div>
-      <button className="add-card" onClick={onNew}>
+      <button className="add-card" disabled={disabled} onClick={onNew}>
         <Plus size={15} /> Add task
       </button>
     </section>
@@ -175,6 +210,8 @@ function App() {
     [userId, setUserId] = useState(""),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
+    [editorError, setEditorError] = useState(""),
+    [notice, setNotice] = useState(""),
     [saving, setSaving] = useState(false),
     [search, setSearch] = useState(""),
     [priority, setPriority] = useState(""),
@@ -183,6 +220,13 @@ function App() {
     [active, setActive] = useState<Task | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const busy = useRef(false);
+  const tasksRef = useRef(tasks);
+  tasksRef.current = tasks;
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(""), 3500);
+    return () => clearTimeout(timer);
+  }, [notice]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
@@ -207,7 +251,7 @@ function App() {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        searchRef.current?.focus();
+        if (!document.querySelector("dialog[open]")) searchRef.current?.focus();
       }
     };
     window.addEventListener("keydown", handler);
@@ -215,6 +259,7 @@ function App() {
   }, []);
   function newTask(status: Status = "todo") {
     if (!userId || loading || saving) return;
+    setEditorError("");
     setEditing({
       id: crypto.randomUUID(),
       user_id: userId,
@@ -227,38 +272,64 @@ function App() {
       created_at: new Date().toISOString(),
     });
   }
-  async function update(task: Task, close = true) {
-    if (busy.current) return;
+  async function update(task: Task, close = true): Promise<boolean> {
+    if (busy.current) return false;
     busy.current = true;
     setSaving(true);
     setError("");
+    setEditorError("");
+    const previous = tasksRef.current;
+    const exists = previous.some((t) => t.id === task.id);
+    const next = exists
+      ? previous.map((t) => (t.id === task.id ? task : t))
+      : [...previous, task];
+    if (!close) setTasks(next);
     try {
       await saveTask(task);
-      const next = tasks.some((t) => t.id === task.id)
-        ? tasks.map((t) => (t.id === task.id ? task : t))
-        : [...tasks, task];
       persistDemo(next);
       setTasks(next);
-      if (close) setEditing(null);
+      const hiddenByFilters = close && !filterTasks([task], search, priority, label).length;
+      if (hiddenByFilters) {
+        setSearch("");
+        setPriority("");
+        setLabel("");
+      }
+      setNotice(
+        close
+          ? exists
+            ? "Changes saved"
+            : "Task created"
+          : `Moved to ${names[task.status]}`,
+      );
+      return true;
     } catch (e) {
-      setError(message(e));
+      if (!close) setTasks(previous);
+      if (close) setEditorError(message(e));
+      else
+        setError(
+          `Couldn’t move the task. ${message(e)} Your previous status has been restored.`,
+        );
+      return false;
     } finally {
       busy.current = false;
       setSaving(false);
     }
   }
-  async function remove(task: Task) {
-    if (!window.confirm(`Delete “${task.title}”?`)) return;
+  async function remove(task: Task): Promise<boolean> {
+    if (busy.current) return false;
     busy.current = true;
     setSaving(true);
+    setEditorError("");
     try {
       await deleteTask(task.id);
-      const next = tasks.filter((t) => t.id !== task.id);
+      const next = tasksRef.current.filter((t) => t.id !== task.id);
       persistDemo(next);
       setTasks(next);
-      setEditing(null);
+      setNotice("Task deleted");
+      return true;
     } catch (e) {
-      setError(message(e));
+      setEditorError(message(e));
+      return false;
     } finally {
       busy.current = false;
       setSaving(false);
@@ -292,7 +363,6 @@ function App() {
             <strong>Nextplay workspace</strong>
             <small>Your ideas, in motion</small>
           </div>
-          <ChevronDown size={14} />
         </div>
         <span className="nav-label">WORKSPACE</span>
         <button
@@ -332,7 +402,15 @@ function App() {
             <strong>Guest workspace</strong>
             <small>
               <span className="online-dot" />
-              {supabase ? "Private & synced" : "Local demo"}
+              {loading
+                ? "Connecting…"
+                : error
+                  ? "Needs attention"
+                  : saving
+                    ? "Saving…"
+                    : supabase
+                      ? "Saved automatically"
+                      : "Local demo"}
             </small>
           </div>
           <ShieldCheck size={16} />
@@ -348,7 +426,7 @@ function App() {
             <span className="private-label">
               <ShieldCheck size={14} /> Only you
             </span>
-            <span className="header-avatar">G</span>
+            <SessionInfo connected={!!userId && !error} saving={saving} />
           </div>
         </header>
         <div className="main-content">
@@ -367,7 +445,7 @@ function App() {
             </div>
             <button
               className="primary"
-              disabled={loading || !userId}
+              disabled={loading || !userId || saving}
               onClick={() => newTask()}
             >
               <Plus size={17} /> New task
@@ -435,36 +513,57 @@ function App() {
                   placeholder="Search tasks…"
                   aria-label="Search tasks"
                 />
-                <kbd>⌘ K</kbd>
+                <kbd>
+                  {/Mac|iPhone|iPad/.test(navigator.platform)
+                    ? "⌘ K"
+                    : "Ctrl K"}
+                </kbd>
               </label>
-              <label className="filter">
+              <div className="filter">
                 <Flag size={14} />
-                <select
-                  aria-label="Filter by priority"
+                <Choice
+                  label="Filter by priority"
                   value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                >
-                  <option value="">All priorities</option>
-                  <option>high</option>
-                  <option>normal</option>
-                  <option>low</option>
-                </select>
-              </label>
-              <label className="filter">
+                  onChange={setPriority}
+                  options={[
+                    { value: "", label: "All priorities" },
+                    ...["high", "normal", "low"].map((p) => ({
+                      value: p,
+                      label: p[0].toUpperCase() + p.slice(1),
+                    })),
+                  ]}
+                />
+              </div>
+              <div className="filter">
                 <Tag size={14} />
-                <select
-                  aria-label="Filter by label"
+                <Choice
+                  label="Filter by label"
                   value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                >
-                  <option value="">All labels</option>
-                  {labels.map((l) => (
-                    <option key={l}>{l}</option>
-                  ))}
-                </select>
-              </label>
+                  onChange={setLabel}
+                  options={[
+                    { value: "", label: "All labels" },
+                    ...labels.map((l) => ({ value: l, label: l })),
+                  ]}
+                />
+              </div>
             </div>
           </div>
+          {(search || priority || label) && (
+            <div className="filter-summary">
+              <span>
+                Showing {filtered.length} of {tasks.length} tasks
+              </span>
+              <button
+                onClick={() => {
+                  setSearch("");
+                  setPriority("");
+                  setLabel("");
+                }}
+              >
+                <X size={13} /> Clear filters
+              </button>
+            </div>
+          )}
           {!supabase && (
             <div className="demo-banner">
               <span>
@@ -493,6 +592,10 @@ function App() {
           ) : (
             <DndContext
               sensors={sensors}
+              collisionDetection={(args) => {
+                const pointer = pointerWithin(args);
+                return pointer.length ? pointer : rectIntersection(args);
+              }}
               onDragStart={(e) =>
                 setActive(tasks.find((t) => t.id === e.active.id) || null)
               }
@@ -506,25 +609,45 @@ function App() {
                     status={status}
                     tasks={filtered.filter((t) => t.status === status)}
                     onNew={() => newTask(status)}
-                    onOpen={setEditing}
+                    disabled={saving || !userId}
+                    filtered={!!(search || priority || label)}
+                    onOpen={(t) => {
+                      if (!saving) {
+                        setEditorError("");
+                        setEditing(t);
+                      }
+                    }}
                   />
                 ))}
               </div>
-              <DragOverlay>
+              <DragOverlay
+                dropAnimation={{
+                  duration: 200,
+                  easing: "cubic-bezier(0.2,0.8,0.2,1)",
+                }}
+              >
                 {active ? (
                   <Card task={active} overlay onOpen={() => {}} />
                 ) : null}
               </DragOverlay>
             </DndContext>
           )}
+          {notice && (
+            <div className="toast" role="status">
+              <Check size={16} />
+              {notice}
+            </div>
+          )}
           <footer>
             <span>
               <span className="online-dot" />
               {saving
                 ? "Saving changes…"
-                : supabase
-                  ? "Your work is saved securely"
-                  : "Made for a little more clarity."}
+                : error
+                  ? "Sync needs attention"
+                  : supabase && userId
+                    ? "All changes saved · Guest session"
+                    : "Made for a little more clarity."}
             </span>
             <span>Drag to move · Open a card to edit</span>
           </footer>
@@ -535,11 +658,13 @@ function App() {
           task={editing}
           existing={tasks.some((t) => t.id === editing.id)}
           saving={saving}
+          error={editorError}
+          onClearError={() => setEditorError("")}
           onClose={() => {
             if (!saving) setEditing(null);
           }}
-          onSave={(t) => void update(t)}
-          onDelete={() => void remove(editing)}
+          onSave={(t) => update(t)}
+          onDelete={() => remove(editing)}
         />
       )}
     </div>
@@ -551,189 +676,6 @@ function message(e: unknown) {
     : typeof e === "object" && e && "message" in e
       ? String(e.message)
       : "Something went wrong. Please try again.";
-}
-function TaskDialog({
-  task,
-  existing,
-  saving,
-  onClose,
-  onSave,
-  onDelete,
-}: {
-  task: Task;
-  existing: boolean;
-  saving: boolean;
-  onClose: () => void;
-  onSave: (t: Task) => void;
-  onDelete: () => void;
-}) {
-  const [draft, setDraft] = useState(task),
-    [tags, setTags] = useState(task.labels.join(", "));
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    ref.current?.showModal();
-    return () => ref.current?.close();
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (draft.title.trim())
-            onSave({
-              ...draft,
-              title: draft.title.trim(),
-              labels: [
-                ...new Set(
-                  tags
-                    .split(",")
-                    .map((t) => t.trim())
-                    .filter(Boolean),
-                ),
-              ],
-            });
-        }}
-      >
-        <div className="dialog-head">
-          <span>
-            <span className="dialog-symbol">
-              <AlignLeft size={18} />
-            </span>
-            {existing ? "Task details" : "A new possibility"}
-          </span>
-          <button
-            type="button"
-            className="icon-button"
-            onClick={onClose}
-            aria-label="Close task"
-            disabled={saving}
-          >
-            <X size={20} />
-          </button>
-        </div>
-        <div className="dialog-content">
-          <label className="field">
-            Task title
-            <input
-              autoFocus
-              required
-              maxLength={160}
-              placeholder="What would you like to work on?"
-              value={draft.title}
-              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-            />
-          </label>
-          <label className="field">
-            Description
-            <textarea
-              rows={4}
-              maxLength={5000}
-              placeholder="Add some context, a few details, or a big idea…"
-              value={draft.description}
-              onChange={(e) =>
-                setDraft({ ...draft, description: e.target.value })
-              }
-            />
-          </label>
-          <div className="form-row">
-            <label className="field">
-              Status
-              <select
-                value={draft.status}
-                onChange={(e) =>
-                  setDraft({ ...draft, status: e.target.value as Status })
-                }
-              >
-                {statuses.map((s) => (
-                  <option key={s} value={s}>
-                    {names[s]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Priority
-              <select
-                value={draft.priority}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    priority: e.target.value as Task["priority"],
-                  })
-                }
-              >
-                <option value="low">Low</option>
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-              </select>
-            </label>
-          </div>
-          <div className="form-row">
-            <label className="field">
-              Due date
-              <input
-                type="date"
-                value={draft.due_date || ""}
-                onChange={(e) =>
-                  setDraft({ ...draft, due_date: e.target.value || null })
-                }
-              />
-            </label>
-            <label className="field">
-              Labels <small>separate with commas</small>
-              <input
-                value={tags}
-                maxLength={250}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="Design, Product"
-              />
-            </label>
-          </div>
-          <p className="dialog-tip">
-            <ShieldCheck size={14} /> Your tasks are private to your guest
-            workspace.
-          </p>
-        </div>
-        <div className="dialog-actions">
-          {existing && (
-            <button
-              type="button"
-              className="delete"
-              disabled={saving}
-              onClick={onDelete}
-            >
-              <Trash2 size={16} /> Delete
-            </button>
-          )}
-          <button
-            type="button"
-            className="secondary"
-            disabled={saving}
-            onClick={onClose}
-          >
-            Cancel
-          </button>
-          <button className="primary" disabled={saving || !draft.title.trim()}>
-            {saving ? (
-              <LoaderCircle size={16} className="spin" />
-            ) : (
-              <Check size={16} />
-            )}{" "}
-            {saving ? "Saving…" : existing ? "Save changes" : "Create task"}
-          </button>
-        </div>
-      </form>
-    </dialog>
-  );
 }
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

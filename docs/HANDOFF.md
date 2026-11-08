@@ -11,15 +11,15 @@ React/TypeScript board, four status columns, dnd-kit interactions, task creation
 ## Verification
 
 - Production TypeScript/Vite build passed.
-- All six unit tests passed. Additionally, 12 live API checks passed: distinct guest sessions; owner create, update, fetch and delete; denial of cross-user reads, updates, deletes and forged-owner inserts; denial of ownership transfer; denial of unauthenticated access; and preservation of the original task after unauthorized requests. The temporary test task was deleted.
+- All eight unit tests passed. Additionally, 12 live API checks passed: distinct guest sessions; owner create, update, fetch and delete; denial of cross-user reads, updates, deletes and forged-owner inserts; denial of ownership transfer; denial of unauthenticated access; and preservation of the original task after unauthorized requests. The temporary test task was deleted.
 - Production dependency audit reported zero vulnerabilities.
 - Word draft archive and XML are valid.
-- Browser tests are present but could not execute: Chromium requires libnspr4 and other Linux libraries. `npx playwright install-deps chromium` requires an interactive sudo password here. No visual or drag behavior is claimed as browser-verified.
+- All 13 browser checks passed across the main suite and focused follow-ups: task CRUD, title/description validation, date selection and N/A, dirty-close protection, pointer drag, keyboard filters, draft retention after failed save, guest-session information, desktop/mobile layouts, drag rollback, and reduced motion. Desktop and mobile screenshots were reviewed. The missing Chromium libraries were downloaded and extracted to /tmp for this session.
 
 ## Required before submission
 
 1. Supabase setup is complete. The URL and publishable key are configured in ignored .env; anonymous authentication, the tasks table and ownership policies were verified live.
-2. Direct API security tests with two independent guest sessions passed. Browser-level visual and drag-and-drop checks remain pending the missing system libraries.
+2. Direct API security tests with two independent guest sessions passed. Browser-level visual and drag-and-drop checks now pass.
 3. GitHub SSH authentication succeeds as alfatla002 using the local key whose public fingerprint matches the supplied value. Use `git push git@github.com:alfatla002/New_Player_Games.git HEAD:main` for subsequent updates. HTTPS gh authentication remains unconfigured.
 4. Vercel deployment is live at https://ali-task-studio.vercel.app. Manually verify task creation, reload, editing, dragging, deletion and mobile layout in the browser.
 5. Candidate: Ali Al-Fatlawi. Generate the Word document with `python3 scripts/make_submission.py --first Ali --last Al-Fatlawi --url https://ali-task-studio.vercel.app`, and review the generated document before submission.

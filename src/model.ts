@@ -20,7 +20,7 @@ export type Task = {
 export function dueState(
   date: string | null,
   status: Status,
-  today = new Date().toLocaleDateString("en-CA"),
+  today = localDate(new Date()),
 ) {
   if (!date || status === "done") return "";
   return date < today ? "overdue" : date === today ? "today" : "";
@@ -37,4 +37,19 @@ export function filterTasks(
       (!priority || t.priority === priority) &&
       (!label || t.labels.includes(label)),
   );
+}
+
+export function localDate(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+export function validateTask(task: Pick<Task, "title" | "description">) {
+  const errors: { title?: string; description?: string } = {};
+  if (!task.title.trim()) errors.title = "Give your task a title.";
+  else if (task.title.trim().length > 160)
+    errors.title = "Keep the title under 161 characters.";
+  if (!task.description.trim())
+    errors.description = "Add a description before saving this task.";
+  else if (task.description.trim().length > 5000)
+    errors.description = "Keep the description under 5,001 characters.";
+  return errors;
 }
