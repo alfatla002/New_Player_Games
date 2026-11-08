@@ -2,7 +2,7 @@
 
 Live app: https://ali-task-studio.vercel.app
 
-A focused Kanban workspace built with React, TypeScript, Vite, dnd-kit, and Supabase.
+A dark-themed Kanban workspace built with React, TypeScript, Vite, dnd-kit, and Supabase.
 
 ## Run locally
 
