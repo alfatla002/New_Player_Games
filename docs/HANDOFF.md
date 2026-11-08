@@ -1,8 +1,8 @@
 # Current handoff
 
-Private owner preview: https://nextplay-task-studio.trustworthystar1.chatgpt.site
+Employer demo: https://ali-task-studio.vercel.app
 
-The preview is built with the supplied Supabase public configuration. Guest sign-in and the tasks table are operational; all 12 live API verification checks passed. It is not a final reviewer-accessible Supabase deployment.
+The Vercel deployment is built with the supplied Supabase public configuration. Guest sign-in and the tasks table are operational; all 12 live API verification checks passed. The production URL returns HTTP 200 without authentication. The deployed bundle was checked for the expected Supabase project and public key.
 
 ## Completed
 
@@ -21,8 +21,8 @@ React/TypeScript board, four status columns, dnd-kit interactions, task creation
 1. Supabase setup is complete. The URL and publishable key are configured in ignored .env; anonymous authentication, the tasks table and ownership policies were verified live.
 2. Direct API security tests with two independent guest sessions passed. Browser-level visual and drag-and-drop checks remain pending the missing system libraries.
 3. GitHub SSH authentication succeeds as alfatla002 using the local key whose public fingerprint matches the supplied value. Use `git push git@github.com:alfatla002/New_Player_Games.git HEAD:main` for subsequent updates. HTTPS gh authentication remains unconfigured.
-4. Deploy to Vercel, Netlify or Cloudflare Pages using `npm run build` and output `dist`; ensure assessors can open the URL.
-5. Candidate: Ali Al-Fatlawi. Generate the Word document with `python3 scripts/make_submission.py --first Ali --last Al-Fatlawi --url LIVE_URL`, and update its verification and deployment status after live setup.
+4. Vercel deployment is live at https://ali-task-studio.vercel.app. Manually verify task creation, reload, editing, dragging, deletion and mobile layout in the browser.
+5. Candidate: Ali Al-Fatlawi. Generate the Word document with `python3 scripts/make_submission.py --first Ali --last Al-Fatlawi --url https://ali-task-studio.vercel.app`, and review the generated document before submission.
 6. Upload the finalized document to Drive and share according to the submission form. Drive upload has not been performed.
 
 The assessment source document is not included in tracked files. Draft artifacts are git-ignored.

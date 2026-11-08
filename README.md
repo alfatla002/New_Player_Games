@@ -1,5 +1,7 @@
 # Nextplay — Task Studio
 
+Live app: https://ali-task-studio.vercel.app
+
 A focused Kanban workspace built with React, TypeScript, Vite, dnd-kit, and Supabase.
 
 ## Run locally
@@ -58,6 +60,6 @@ The board refreshes after a successful drop, with no realtime subscription. Task
 
 ## Delivery status
 
-Supabase public configuration is installed in the ignored local environment file. Live verification passed all 12 guest authentication, task persistence, ownership, and RLS checks after anonymous sign-ins were enabled and the migration was applied. An evaluator-accessible deployment remains pending. GitHub SSH authentication works for alfatla002. The submission draft uses Ali Al-Fatlawi. The private Sites demo is for owner preview and is not an evaluator submission URL. No assessment source text or PDF is included in this repository.
+Supabase public configuration is installed in the ignored local environment file. Live verification passed all 12 guest authentication, task persistence, ownership, and RLS checks after anonymous sign-ins were enabled and the migration was applied. The evaluator-facing Vercel deployment is live at https://ali-task-studio.vercel.app. GitHub SSH authentication works for alfatla002. The submission draft uses Ali Al-Fatlawi. Use the production Vercel URL for employer access. No assessment source text or PDF is included in this repository.
 
-Generate the local draft document with `python3 scripts/make_submission.py`. Finalize the name, hosting URL, and verification status before submitting. Generated documents and screenshots live in the git-ignored `artifacts/` directory.
+Generate the local draft document with `python3 scripts/make_submission.py`. The candidate name is Ali Al-Fatlawi and the production URL is configured in the document generator; review the document and manually check the live board before submitting. Generated documents and screenshots live in the git-ignored `artifacts/` directory.
